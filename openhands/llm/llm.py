@@ -26,6 +26,7 @@ from litellm.exceptions import (
 from litellm.types.utils import CostPerToken, ModelResponse, Usage
 
 from openhands.core.exceptions import CloudFlareBlockageError
+from openhands.core.exceptions.token_errors import TokenLimitError
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import Message
 from openhands.llm.debug_mixin import DebugMixin
@@ -48,6 +49,7 @@ LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
+    TokenLimitError,
 )
 
 # cache prompt supporting models
@@ -209,6 +211,19 @@ class LLM(RetryMixin, DebugMixin):
             # log the entire LLM prompt
             self.log_prompt(messages)
 
+            # Check token limits before making the API call
+            try:
+                input_tokens = self.get_token_count(messages)
+                if input_tokens > self.config.max_input_tokens:
+                    raise TokenLimitError(
+                        f"Input tokens ({input_tokens}) exceed model's maximum limit ({self.config.max_input_tokens})",
+                        input_tokens=input_tokens,
+                        max_input_tokens=self.config.max_input_tokens,
+                    )
+            except Exception as e:
+                if not isinstance(e, TokenLimitError):
+                    logger.debug(f"Failed to validate token count: {e}")
+
             if self.is_caching_prompt_active():
                 # Anthropic-specific prompt caching
                 if 'claude-3' in self.config.model:
@@ -263,7 +278,7 @@ class LLM(RetryMixin, DebugMixin):
                     with open(log_file, 'w') as f:
                         f.write(json.dumps(_d))
 
-                message_back: str = resp['choices'][0]['message']['content']
+                message_back: str = resp.choices[0].message["content"]
 
                 # log the LLM response
                 self.log_response(message_back)
@@ -277,6 +292,10 @@ class LLM(RetryMixin, DebugMixin):
                     raise CloudFlareBlockageError(
                         'Request blocked by CloudFlare'
                     ) from e
+                # Check for token limit errors in API response
+                error_msg = str(e).lower()
+                if any(phrase in error_msg for phrase in ['token limit', 'maximum context', 'too long']):
+                    raise TokenLimitError(str(e)) from e
                 raise
 
         self._completion = wrapper
