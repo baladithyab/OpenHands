@@ -26,6 +26,7 @@ from litellm.exceptions import (
 from litellm.types.utils import CostPerToken, ModelResponse, Usage
 
 from openhands.core.exceptions import CloudFlareBlockageError
+from openhands.core.exceptions.token_errors import TokenLimitError
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import Message
 from openhands.llm.debug_mixin import DebugMixin
@@ -48,7 +49,7 @@ LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
-    TokenLimitError,
+    TokenLimitError,  # Retry on token limit errors
 )
 
 # cache prompt supporting models
