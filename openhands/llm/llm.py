@@ -48,6 +48,7 @@ LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
+    TokenLimitError,
 )
 
 # cache prompt supporting models
@@ -209,6 +210,19 @@ class LLM(RetryMixin, DebugMixin):
             # log the entire LLM prompt
             self.log_prompt(messages)
 
+            # Check token limits before making the API call
+            try:
+                input_tokens = self.get_token_count(messages)
+                if input_tokens > self.config.max_input_tokens:
+                    raise TokenLimitError(
+                        f"Input tokens ({input_tokens}) exceed model's maximum limit ({self.config.max_input_tokens})",
+                        input_tokens=input_tokens,
+                        max_input_tokens=self.config.max_input_tokens,
+                    )
+            except Exception as e:
+                if not isinstance(e, TokenLimitError):
+                    logger.debug(f"Failed to validate token count: {e}")
+
             if self.is_caching_prompt_active():
                 # Anthropic-specific prompt caching
                 if 'claude-3' in self.config.model:
@@ -277,6 +291,10 @@ class LLM(RetryMixin, DebugMixin):
                     raise CloudFlareBlockageError(
                         'Request blocked by CloudFlare'
                     ) from e
+                # Check for token limit errors in API response
+                error_msg = str(e).lower()
+                if any(phrase in error_msg for phrase in ['token limit', 'maximum context', 'too long']):
+                    raise TokenLimitError(str(e)) from e
                 raise
 
         self._completion = wrapper
