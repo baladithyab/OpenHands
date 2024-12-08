@@ -1,10 +1,11 @@
 # Workflow that runs python unit tests on mac
 name: Run Python Unit Tests Mac
 
-# This job is flaky so only run it nightly
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   # Run python unit tests on macOS
