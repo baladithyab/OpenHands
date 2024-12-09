@@ -154,28 +154,114 @@ async def test_automatic_knowledge_extraction(llm_config, agent_config, event_st
     """Test automatic extraction of knowledge from events."""
     memory = LongTermMemory(llm_config, agent_config, event_stream)
     
-    # Create a successful code execution event
-    code_event = Event(
+    # 1. Test API Documentation Extraction
+    api_doc_event = Event(
+        type="observation",
+        data={
+            "web_content": "API Documentation: Function usage example\nGET /api/v1/users\nReturns list of users",
+            "type": "web_read",
+            "url": "https://api.example.com/docs"
+        }
+    )
+    memory.add_event(api_doc_event)
+    
+    results = memory.global_kb.search_knowledge("API", category="api_documentation")
+    assert len(results) > 0
+    result = results[0]
+    assert result.category == "api_documentation"
+    assert "api.example.com" in result.metadata.get("url", "")
+
+    # 2. Test Code Pattern Extraction
+    # 2.1 Import Pattern
+    import_event = Event(
         type="action",
         data={
-            "code": "print('Hello, World!')",
-            "result": "Hello, World!",
+            "code": "from typing import Optional\nimport json",
+            "result": "",
             "type": "execute_python"
         }
     )
+    memory.add_event(import_event)
     
-    # Add event to memory
-    memory.add_event(code_event)
-    
-    # Search for code patterns in global KB
-    results = memory.global_kb.search_knowledge("Hello World", category="code_pattern")
+    results = memory.global_kb.search_knowledge("import", category="import_pattern")
     assert len(results) > 0
+    assert "typing" in results[0].content
     
-    # Verify the extracted knowledge
-    result = results[0]
-    assert result.category == "code_pattern"
-    assert "Hello, World!" in result.content
-    assert result.source.startswith("session_")
+    # 2.2 Function Definition Pattern
+    def_event = Event(
+        type="action",
+        data={
+            "code": "def process_data(input: str) -> dict:\n    return json.loads(input)",
+            "result": "",
+            "type": "execute_python"
+        }
+    )
+    memory.add_event(def_event)
+    
+    results = memory.global_kb.search_knowledge("process", category="definition_pattern")
+    assert len(results) > 0
+    assert "process_data" in results[0].content
+
+    # 3. Test Command Pattern Extraction
+    # 3.1 Git Command
+    git_event = Event(
+        type="action",
+        data={
+            "code": "git checkout -b feature/new-branch",
+            "result": "Switched to a new branch 'feature/new-branch'",
+            "type": "execute_bash"
+        }
+    )
+    memory.add_event(git_event)
+    
+    results = memory.global_kb.search_knowledge("git checkout", category="git_command")
+    assert len(results) > 0
+    assert "checkout" in results[0].content
+    
+    # 3.2 Package Management
+    pip_event = Event(
+        type="action",
+        data={
+            "code": "pip install requests==2.28.1",
+            "result": "Successfully installed requests-2.28.1",
+            "type": "execute_bash"
+        }
+    )
+    memory.add_event(pip_event)
+    
+    results = memory.global_kb.search_knowledge("pip install", category="package_management")
+    assert len(results) > 0
+    assert "requests" in results[0].content
+
+    # 4. Test Environment Setup Extraction
+    env_event = Event(
+        type="action",
+        data={
+            "code": "export PATH=$PATH:/usr/local/bin\nexport API_KEY=abc123",
+            "result": "",
+            "type": "execute_bash"
+        }
+    )
+    memory.add_event(env_event)
+    
+    results = memory.global_kb.search_knowledge("environment", category="environment_setup")
+    assert len(results) > 0
+    assert "PATH" in results[0].content
+    
+    # 5. Test Security Pattern Extraction
+    security_event = Event(
+        type="observation",
+        data={
+            "web_content": "Security Best Practices: Always use HTTPS for API calls. Authenticate using OAuth 2.0",
+            "type": "web_read",
+            "url": "https://security.example.com/best-practices"
+        }
+    )
+    memory.add_event(security_event)
+    
+    results = memory.global_kb.search_knowledge("security", category="security_patterns")
+    assert len(results) > 0
+    assert "HTTPS" in results[0].content
 
 @pytest.mark.asyncio
 async def test_knowledge_versioning(llm_config):

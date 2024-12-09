@@ -116,39 +116,182 @@ class LongTermMemory:
         self._maybe_add_to_global_kb(event_data, event_type)
 
     def _maybe_add_to_global_kb(self, event_data: dict, event_type: str):
-        """Check if an event contains knowledge that should be added to global KB."""
-        # Example criteria for what constitutes global knowledge:
-        # 1. Successful code executions
-        # 2. API documentation findings
-        # 3. Best practices discovered
-        # 4. Common error solutions
-
+        """Check if an event contains knowledge that should be added to global KB.
+        
+        Knowledge Extraction Patterns:
+        1. API Documentation & References
+           - API documentation pages
+           - Function signatures and usage examples
+           - Package import patterns
+           
+        2. Code Patterns & Solutions
+           - Successful code executions
+           - Common programming patterns
+           - Configuration examples
+           - Build/deployment scripts
+           
+        3. Error Handling & Troubleshooting
+           - Error messages and their solutions
+           - Common pitfalls and workarounds
+           - Debug patterns
+           
+        4. Best Practices & Conventions
+           - Code style recommendations
+           - Project structure patterns
+           - Security best practices
+           
+        5. Environment & Setup
+           - Dependencies and versions
+           - Environment variables
+           - Installation steps
+           
+        6. Tool Usage & Commands
+           - CLI command patterns
+           - Tool configuration
+           - Common flags and options
+        """
         try:
             if event_type == 'observation':
-                # Example: Extract API documentation or successful code patterns
+                # 1. API Documentation & References
                 if 'web_content' in event_data:
-                    content = event_data['web_content']
-                    if 'api' in content.lower() or 'documentation' in content.lower():
+                    content = event_data['web_content'].lower()
+                    
+                    # API Documentation
+                    if any(term in content for term in ['api', 'documentation', 'reference', 'sdk']):
                         entry = KnowledgeEntry(
-                            content=content,
+                            content=event_data['web_content'],
                             category='api_documentation',
                             source=f'session_{self.event_stream.sid}',
-                            metadata={'event_type': event_type}
+                            metadata={
+                                'event_type': event_type,
+                                'url': event_data.get('url', '')
+                            }
+                        )
+                        self.global_kb.add_entry(entry)
+                    
+                    # Best Practices & Conventions
+                    if any(term in content for term in ['best practice', 'convention', 'recommended', 'style guide']):
+                        entry = KnowledgeEntry(
+                            content=event_data['web_content'],
+                            category='best_practices',
+                            source=f'session_{self.event_stream.sid}',
+                            metadata={
+                                'event_type': event_type,
+                                'url': event_data.get('url', '')
+                            }
+                        )
+                        self.global_kb.add_entry(entry)
+                    
+                    # Security Patterns
+                    if any(term in content for term in ['security', 'vulnerability', 'cve', 'authentication']):
+                        entry = KnowledgeEntry(
+                            content=event_data['web_content'],
+                            category='security_patterns',
+                            source=f'session_{self.event_stream.sid}',
+                            metadata={
+                                'event_type': event_type,
+                                'url': event_data.get('url', '')
+                            }
                         )
                         self.global_kb.add_entry(entry)
 
             elif event_type == 'action':
-                # Example: Extract successful code executions
+                # 2. Code Patterns & Solutions
                 if 'code' in event_data and 'result' in event_data:
-                    if 'error' not in event_data['result'].lower():
+                    result_lower = event_data['result'].lower()
+                    code_lower = event_data['code'].lower()
+                    
+                    # Successful Code Executions
+                    if 'error' not in result_lower and 'exception' not in result_lower:
+                        # Identify specific code patterns
+                        pattern_type = None
+                        if any(term in code_lower for term in ['import', 'from']):
+                            pattern_type = 'import_pattern'
+                        elif any(term in code_lower for term in ['def ', 'class ']):
+                            pattern_type = 'definition_pattern'
+                        elif any(term in code_lower for term in ['try:', 'except', 'finally:']):
+                            pattern_type = 'error_handling'
+                        elif any(term in code_lower for term in ['async ', 'await ']):
+                            pattern_type = 'async_pattern'
+                        else:
+                            pattern_type = 'code_pattern'
+
                         entry = KnowledgeEntry(
                             content=json.dumps({
                                 'code': event_data['code'],
-                                'result': event_data['result']
+                                'result': event_data['result'],
+                                'pattern_type': pattern_type
                             }),
-                            category='code_pattern',
+                            category=pattern_type,
                             source=f'session_{self.event_stream.sid}',
-                            metadata={'event_type': event_type}
+                            metadata={
+                                'event_type': event_type,
+                                'command_type': event_data.get('type', '')
+                            }
+                        )
+                        self.global_kb.add_entry(entry)
+                    
+                    # Error Solutions
+                    elif 'error' in result_lower or 'exception' in result_lower:
+                        # Only store if this error was later resolved in the session
+                        # This requires checking future events, which we'll implement
+                        # TODO: Implement error resolution tracking
+                        pass
+
+                # 3. Tool Usage & Commands
+                if event_data.get('type') == 'execute_bash':
+                    command = event_data.get('code', '').strip()
+                    result = event_data.get('result', '').lower()
+                    
+                    # Store successful command patterns
+                    if command and 'error' not in result and 'exception' not in result:
+                        # Identify command category
+                        cmd_category = 'shell_command'
+                        if 'git' in command:
+                            cmd_category = 'git_command'
+                        elif 'docker' in command or 'container' in command:
+                            cmd_category = 'container_command'
+                        elif 'pip' in command or 'poetry' in command:
+                            cmd_category = 'package_management'
+                        elif any(term in command for term in ['chmod', 'chown', 'sudo']):
+                            cmd_category = 'permission_command'
+                            
+                        entry = KnowledgeEntry(
+                            content=json.dumps({
+                                'command': command,
+                                'result': event_data.get('result', ''),
+                                'working_directory': event_data.get('cwd', '')
+                            }),
+                            category=cmd_category,
+                            source=f'session_{self.event_stream.sid}',
+                            metadata={
+                                'event_type': event_type,
+                                'shell': event_data.get('shell', 'bash')
+                            }
+                        )
+                        self.global_kb.add_entry(entry)
+
+                # 4. Environment & Setup
+                if event_data.get('type') in ['execute_bash', 'execute_python']:
+                    content_lower = (event_data.get('code', '') + event_data.get('result', '')).lower()
+                    
+                    # Detect environment-related operations
+                    if any(term in content_lower for term in [
+                        'env', 'export', 'path=', 'config', 'setup', 'install',
+                        'requirements.txt', 'pyproject.toml', 'package.json'
+                    ]):
+                        entry = KnowledgeEntry(
+                            content=json.dumps({
+                                'operation': event_data.get('code', ''),
+                                'result': event_data.get('result', ''),
+                                'context': event_data.get('type', '')
+                            }),
+                            category='environment_setup',
+                            source=f'session_{self.event_stream.sid}',
+                            metadata={
+                                'event_type': event_type,
+                                'setup_type': 'environment'
+                            }
                         )
                         self.global_kb.add_entry(entry)
 
