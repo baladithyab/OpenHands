@@ -1,10 +1,12 @@
 import json
+from typing import Optional
 
 from openhands.core.config import AgentConfig, LLMConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.events.event import Event
 from openhands.events.serialization.event import event_to_memory
 from openhands.events.stream import EventStream
+from openhands.memory.global_kb import GlobalKnowledgeBase, KnowledgeEntry
 from openhands.utils.embeddings import (
     LLAMA_INDEX_AVAILABLE,
     EmbeddingsLoader,
@@ -22,6 +24,15 @@ if LLAMA_INDEX_AVAILABLE:
     from llama_index.core.schema import TextNode
     from llama_index.vector_stores.chroma import ChromaVectorStore
 
+# Singleton instance of GlobalKnowledgeBase
+_global_kb: Optional[GlobalKnowledgeBase] = None
+
+def get_global_kb(llm_config: LLMConfig) -> GlobalKnowledgeBase:
+    """Get or create the global knowledge base singleton."""
+    global _global_kb
+    if _global_kb is None:
+        _global_kb = GlobalKnowledgeBase(llm_config)
+    return _global_kb
 
 class LongTermMemory:
     """Handles storing information for the agent to access later, using chromadb."""
@@ -38,10 +49,9 @@ class LongTermMemory:
 
         check_llama_index()
 
-        # initialize the chromadb client
+        # initialize the chromadb client for session memory
         db = chromadb.PersistentClient(
             path=f'./cache/sessions/{event_stream.sid}/memory',
-            # FIXME anonymized_telemetry=False,
         )
         self.collection = db.get_or_create_collection(name='memories')
         vector_store = ChromaVectorStore(chroma_collection=self.collection)
@@ -61,6 +71,9 @@ class LongTermMemory:
 
         # max of threads to run the pipeline
         self.memory_max_threads = agent_config.memory_max_threads
+
+        # Get reference to global knowledge base
+        self.global_kb = get_global_kb(llm_config)
 
     def add_event(self, event: Event):
         """Adds a new event to the long term memory with a unique id.
@@ -99,6 +112,49 @@ class LongTermMemory:
         logger.debug('Adding %s event to memory: %d', event_type, self.thought_idx)
         self._add_document(document=doc)
 
+        # Check if this event contains knowledge that should be added to global KB
+        self._maybe_add_to_global_kb(event_data, event_type)
+
+    def _maybe_add_to_global_kb(self, event_data: dict, event_type: str):
+        """Check if an event contains knowledge that should be added to global KB."""
+        # Example criteria for what constitutes global knowledge:
+        # 1. Successful code executions
+        # 2. API documentation findings
+        # 3. Best practices discovered
+        # 4. Common error solutions
+
+        try:
+            if event_type == 'observation':
+                # Example: Extract API documentation or successful code patterns
+                if 'web_content' in event_data:
+                    content = event_data['web_content']
+                    if 'api' in content.lower() or 'documentation' in content.lower():
+                        entry = KnowledgeEntry(
+                            content=content,
+                            category='api_documentation',
+                            source=f'session_{self.event_stream.sid}',
+                            metadata={'event_type': event_type}
+                        )
+                        self.global_kb.add_entry(entry)
+
+            elif event_type == 'action':
+                # Example: Extract successful code executions
+                if 'code' in event_data and 'result' in event_data:
+                    if 'error' not in event_data['result'].lower():
+                        entry = KnowledgeEntry(
+                            content=json.dumps({
+                                'code': event_data['code'],
+                                'result': event_data['result']
+                            }),
+                            category='code_pattern',
+                            source=f'session_{self.event_stream.sid}',
+                            metadata={'event_type': event_type}
+                        )
+                        self.global_kb.add_entry(entry)
+
+        except Exception as e:
+            logger.warning(f'Failed to process event for global KB: {e}')
+
     def _add_document(self, document: 'Document'):
         """Inserts a single document into the index."""
         self.index.insert_nodes([self._create_node(document)])
@@ -112,27 +168,43 @@ class LongTermMemory:
         )
 
     def search(self, query: str, k: int = 10) -> list[str]:
-        """Searches through the current memory using VectorIndexRetriever.
+        """Searches through both local memory and global knowledge base.
 
         Parameters:
         - query (str): A query to match search results to
-        - k (int): Number of top results to return
+        - k (int): Number of top results to return from each source
 
         Returns:
-        - list[str]: List of top k results found in current memory
+        - list[str]: Combined list of results from both local and global memory
         """
+        # Search local session memory
         retriever = VectorIndexRetriever(
             index=self.index,
             similarity_top_k=k,
         )
-        results = retriever.retrieve(query)
+        local_results = retriever.retrieve(query)
 
-        for result in results:
+        # Search global knowledge base
+        global_results = self.global_kb.search_knowledge(query, k=k)
+
+        # Combine and log results
+        combined_results = []
+        
+        # Add local results
+        for result in local_results:
             logger.debug(
-                f'Doc ID: {result.doc_id}:\n Text: {result.get_text()}\n Score: {result.score}'
+                f'Local Memory - Doc ID: {result.doc_id}:\n Text: {result.get_text()}\n Score: {result.score}'
             )
+            combined_results.append(result.get_text())
 
-        return [r.get_text() for r in results]
+        # Add global results
+        for entry in global_results:
+            logger.debug(
+                f'Global KB - Category: {entry.category}:\n Content: {entry.content}\n Source: {entry.source}'
+            )
+            combined_results.append(json.dumps(entry.to_dict()))
+
+        return combined_results
 
     def _events_to_docs(self) -> list['Document']:
         """Convert all events from the EventStream to documents for batch insert into the index."""
@@ -171,6 +243,10 @@ class LongTermMemory:
                 )
                 documents.append(doc)
                 self.thought_idx += 1
+
+                # Also check for global knowledge in each event
+                self._maybe_add_to_global_kb(event_data, event_type)
+
             except (json.JSONDecodeError, KeyError, ValueError) as e:
                 logger.warning(f'Failed to process event: {e}')
                 continue
