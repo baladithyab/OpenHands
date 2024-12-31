@@ -86,14 +86,20 @@ workspace_base = "./workspace"
 # use 'llm' for the default LLM config
 ##############################################################################
 [llm]
-# AWS access key ID
-#aws_access_key_id = ""
+# AWS Authentication Options
+#aws_access_key_id = ""                 # AWS access key ID
+#aws_secret_access_key = ""             # AWS secret access key
+#aws_session_token = ""                 # AWS session token for temporary credentials
+#aws_region_name = ""                   # AWS region name (e.g., us-east-1, us-west-2)
+#aws_profile_name = ""                  # AWS profile name for SSO or credential profiles
+#aws_role_name = ""                     # AWS role name for STS-based authentication
+#aws_session_name = ""                  # AWS session name for role assumption
+#aws_web_identity_token = ""            # AWS web identity token for OIDC authentication
+#aws_bedrock_runtime_endpoint = ""      # Custom endpoint URL for Bedrock runtime
 
-# AWS region name
-#aws_region_name = ""
-
-# AWS secret access key
-#aws_secret_access_key = ""
+# AWS Bedrock Specific Options
+#guardrail_config = { guardrailIdentifier = "your-guardrail-id", guardrailVersion = "DRAFT", trace = "disabled" }  # Bedrock guardrails configuration
+#cross_region_target = ""               # Target region prefix for cross-region inferencing (e.g., 'us')
 
 # API key to use (For Headless / CLI only -  In Web this is overridden by Session Init)
 api_key = "your-api-key"
@@ -189,6 +195,39 @@ model = "gpt-4o"
 [llm.gpt4o-mini]
 api_key = "your-api-key"
 model = "gpt-4o"
+
+# Example configuration for AWS Bedrock
+[llm.bedrock-claude]
+model = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+aws_access_key_id = "your-access-key"              # Or use AWS_ACCESS_KEY_ID env var
+aws_secret_access_key = "your-secret-key"          # Or use AWS_SECRET_ACCESS_KEY env var
+aws_region_name = "us-west-2"                      # Or use AWS_REGION_NAME env var
+temperature = 0.7
+top_p = 0.9
+
+# Example with SSO authentication
+[llm.bedrock-claude-sso]
+model = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+aws_profile_name = "dev-profile"                   # Uses credentials from ~/.aws/config
+aws_region_name = "us-west-2"
+
+# Example with cross-region inferencing
+[llm.bedrock-claude-cross-region]
+model = "bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0"  # Note the 'us.' prefix
+aws_profile_name = "dev-profile"
+aws_region_name = "us-west-2"
+cross_region_target = "us"                         # Enables cross-region inferencing
+
+# Example with guardrails
+[llm.bedrock-claude-guardrails]
+model = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+aws_profile_name = "dev-profile"
+aws_region_name = "us-west-2"
+guardrail_config = { 
+    guardrailIdentifier = "your-guardrail-id",
+    guardrailVersion = "DRAFT",
+    trace = "disabled"
+}
 
 
 #################################### Agent ###################################

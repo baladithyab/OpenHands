@@ -5,7 +5,13 @@ from typing import Optional
 from openhands.core.config.config_utils import get_field_info
 from openhands.core.logger import LOG_DIR
 
-LLM_SENSITIVE_FIELDS = ['api_key', 'aws_access_key_id', 'aws_secret_access_key']
+LLM_SENSITIVE_FIELDS = [
+    'api_key',
+    'aws_access_key_id',
+    'aws_secret_access_key',
+    'aws_session_token',
+    'aws_web_identity_token'
+]
 
 
 @dataclass
@@ -22,7 +28,15 @@ class LLMConfig:
         embedding_deployment_name: The name of the deployment for the embedding API. This is used for Azure OpenAI.
         aws_access_key_id: The AWS access key ID.
         aws_secret_access_key: The AWS secret access key.
+        aws_session_token: The AWS session token for temporary credentials.
         aws_region_name: The AWS region name.
+        aws_profile_name: The AWS profile name for SSO or credential profiles.
+        aws_role_name: The AWS role name for STS-based authentication.
+        aws_session_name: The AWS session name for role assumption.
+        aws_web_identity_token: The AWS web identity token for OIDC authentication.
+        aws_bedrock_runtime_endpoint: Custom endpoint URL for Bedrock runtime.
+        guardrail_config: Configuration for AWS Bedrock guardrails.
+        cross_region_target: Target region prefix for cross-region inferencing (e.g., 'us').
         num_retries: The number of retries to attempt.
         retry_multiplier: The multiplier for the exponential backoff.
         retry_min_wait: The minimum time to wait between retries, in seconds. This is exponential backoff minimum. For models with very low limits, this can be set to 15-20.
@@ -55,9 +69,21 @@ class LLMConfig:
     embedding_model: str = 'local'
     embedding_base_url: str | None = None
     embedding_deployment_name: str | None = None
+    # AWS Authentication Options
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
+    aws_session_token: str | None = None
     aws_region_name: str | None = None
+    aws_profile_name: str | None = None
+    aws_role_name: str | None = None
+    aws_session_name: str | None = None
+    aws_web_identity_token: str | None = None
+    aws_bedrock_runtime_endpoint: str | None = None
+
+    # AWS Bedrock Specific Options
+    guardrail_config: dict | None = None  # For Bedrock guardrails
+    cross_region_target: str | None = None  # For cross-region inferencing (e.g., 'us')
+    
     openrouter_site_url: str = 'https://docs.all-hands.dev/'
     openrouter_app_name: str = 'OpenHands'
     num_retries: int = 8
