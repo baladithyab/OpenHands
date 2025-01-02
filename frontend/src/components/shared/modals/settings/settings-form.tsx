@@ -17,6 +17,8 @@ import { BaseUrlInput } from "../../inputs/base-url-input";
 import { ConfirmationModeSwitch } from "../../inputs/confirmation-mode-switch";
 import { CustomModelInput } from "../../inputs/custom-model-input";
 import { SecurityAnalyzerInput } from "../../inputs/security-analyzers-input";
+import { AWSAuthInputs } from "../../inputs/aws-auth-inputs";
+import { BedrockSettingsInputs } from "../../inputs/bedrock-settings-inputs";
 import { ModalBackdrop } from "../modal-backdrop";
 import { ModelSelector } from "./model-selector";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
@@ -184,6 +186,43 @@ export function SettingsForm({
                 isDisabled={!!disabled}
                 defaultSelected={settings.CONFIRMATION_MODE}
               />
+
+              {/* Show AWS Bedrock settings if a Bedrock model is selected */}
+              {settings.LLM_MODEL?.startsWith('bedrock/') && (
+                <>
+                  <div className="mt-4 border-t pt-4">
+                    <h3 className="mb-4 text-lg font-medium">AWS Bedrock Configuration</h3>
+                    <AWSAuthInputs
+                      isDisabled={!!disabled}
+                      defaultValues={{
+                        accessKeyId: settings.AWS_ACCESS_KEY_ID,
+                        secretAccessKey: settings.AWS_SECRET_ACCESS_KEY,
+                        sessionToken: settings.AWS_SESSION_TOKEN,
+                        region: settings.AWS_REGION_NAME,
+                        profileName: settings.AWS_PROFILE_NAME,
+                        roleName: settings.AWS_ROLE_NAME,
+                        sessionName: settings.AWS_SESSION_NAME,
+                        webIdentityToken: settings.AWS_WEB_IDENTITY_TOKEN,
+                        bedrockEndpoint: settings.AWS_BEDROCK_RUNTIME_ENDPOINT,
+                      }}
+                      authType={settings.AWS_PROFILE_NAME ? 'profile' : 'keys'}
+                    />
+                  </div>
+
+                  <div className="mt-4 border-t pt-4">
+                    <h3 className="mb-4 text-lg font-medium">Bedrock Advanced Features</h3>
+                    <BedrockSettingsInputs
+                      isDisabled={!!disabled}
+                      defaultValues={{
+                        guardrailId: settings.GUARDRAIL_CONFIG?.guardrailIdentifier,
+                        guardrailVersion: settings.GUARDRAIL_CONFIG?.guardrailVersion,
+                        guardrailTrace: settings.GUARDRAIL_CONFIG?.trace,
+                        crossRegionTarget: settings.CROSS_REGION_TARGET,
+                      }}
+                    />
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
