@@ -2,6 +2,7 @@ import { useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import React from "react";
 import posthog from "posthog-js";
+import { validateBedrockSettings } from "#/utils/validate-bedrock-settings";
 import { organizeModelsAndProviders } from "#/utils/organize-models-and-providers";
 import { getDefaultSettings, Settings } from "#/services/settings";
 import { extractModelAndProvider } from "#/utils/extract-model-and-provider";
@@ -22,6 +23,7 @@ import { PromptRoutingInputs } from "../../inputs/prompt-routing-inputs";
 import { ModalBackdrop } from "../modal-backdrop";
 import { ModelSelector } from "./model-selector";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
+import { ValidationToast } from "../../validation-toast";
 
 interface SettingsFormProps {
   disabled?: boolean;
@@ -88,6 +90,7 @@ export function SettingsForm({
     React.useState(false);
   const [confirmEndSessionModalOpen, setConfirmEndSessionModalOpen] =
     React.useState(false);
+  const [validationErrors, setValidationErrors] = React.useState<Array<{field: string; message: string}>>([]);
 
   const resetOngoingSession = () => {
     if (location.pathname.startsWith("/conversations/")) {
@@ -99,6 +102,13 @@ export function SettingsForm({
     const keys = Array.from(formData.keys());
     const isUsingAdvancedOptions = keys.includes("use-advanced-options");
     const newSettings = extractSettings(formData);
+
+    // Validate Bedrock settings
+    const errors = validateBedrockSettings(newSettings);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
 
     saveSettingsView(isUsingAdvancedOptions ? "advanced" : "basic");
     await saveSettings(newSettings, { onSuccess: onClose });
@@ -297,6 +307,13 @@ export function SettingsForm({
             }}
           />
         </ModalBackdrop>
+      )}
+
+      {validationErrors.length > 0 && (
+        <ValidationToast
+          errors={validationErrors}
+          onClose={() => setValidationErrors([])}
+        />
       )}
     </div>
   );

@@ -390,5 +390,33 @@
     "ar": "تمكين مقاييس CloudWatch",
     "fr": "Activer les métriques CloudWatch",
     "tr": "CloudWatch Metriklerini Etkinleştir"
+  },
+  "SETTINGS_FORM$VALIDATION_ERROR_TITLE": {
+    "en": "Invalid Settings",
+    "zh-CN": "无效的设置",
+    "de": "Ungültige Einstellungen",
+    "ko-KR": "잘못된 설정",
+    "no": "Ugyldige innstillinger",
+    "zh-TW": "無效的設定",
+    "it": "Impostazioni non valide",
+    "pt": "Configurações inválidas",
+    "es": "Configuración inválida",
+    "ar": "إعدادات غير صالحة",
+    "fr": "Paramètres invalides",
+    "tr": "Geçersiz Ayarlar"
+  },
+  "SETTINGS_FORM$DISMISS_BUTTON": {
+    "en": "Dismiss",
+    "zh-CN": "关闭",
+    "de": "Schließen",
+    "ko-KR": "닫기",
+    "no": "Lukk",
+    "zh-TW": "關閉",
+    "it": "Chiudi",
+    "pt": "Fechar",
+    "es": "Cerrar",
+    "ar": "إغلاق",
+    "fr": "Fermer",
+    "tr": "Kapat"
   }
 }
