@@ -1,0 +1,48 @@
+# Example configuration for AWS Bedrock integration
+
+[llm]
+# Basic Bedrock configuration with Claude 3
+model = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+aws_access_key_id = "your-access-key"              # Or use AWS_ACCESS_KEY_ID env var
+aws_secret_access_key = "your-secret-key"          # Or use AWS_SECRET_ACCESS_KEY env var
+aws_region_name = "us-west-2"                      # Or use AWS_REGION_NAME env var
+temperature = 0.7
+top_p = 0.9
+caching_prompt = true                              # Enable prompt caching
+
+# Example with SSO authentication
+[llm.bedrock-claude-sso]
+model = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+aws_profile_name = "dev-profile"                   # Uses credentials from ~/.aws/config
+aws_region_name = "us-west-2"
+caching_prompt = true
+
+# Example with cross-region inferencing
+[llm.bedrock-claude-cross-region]
+model = "bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0"  # Note the 'us.' prefix
+aws_profile_name = "dev-profile"
+aws_region_name = "us-west-2"
+cross_region_target = "us"                         # Enables cross-region inferencing
+caching_prompt = true
+
+# Example with guardrails
+[llm.bedrock-claude-guardrails]
+model = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+aws_profile_name = "dev-profile"
+aws_region_name = "us-west-2"
+guardrail_config = { 
+    guardrailIdentifier = "your-guardrail-id",
+    guardrailVersion = "DRAFT",
+    trace = "disabled"
+}
+caching_prompt = true
+
+# Example with Titan model
+[llm.bedrock-titan]
+model = "bedrock/amazon.titan-text-express-v1"
+aws_access_key_id = "your-access-key"
+aws_secret_access_key = "your-secret-key"
+aws_region_name = "us-west-2"
+temperature = 0.7
+top_p = 0.9
+caching_prompt = true
