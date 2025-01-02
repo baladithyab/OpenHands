@@ -87,7 +87,7 @@ export function PromptCachingInputs({
               type="number"
               name="cache-min-tokens"
               className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-              defaultValue={defaultValues.cacheMinTokens ?? modelDefaults.minTokens}
+              defaultValue={(defaultValues.cacheMinTokens ?? modelDefaults.minTokens)?.toString()}
               placeholder={modelDefaults.minTokens?.toString() ?? t(I18nKey.SETTINGS_FORM$MODEL_SPECIFIC_PLACEHOLDER)}
               disabled={isDisabled}
             />
@@ -104,7 +104,7 @@ export function PromptCachingInputs({
               type="number"
               name="cache-max-checkpoints"
               className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-              defaultValue={defaultValues.cacheMaxCheckpoints ?? modelDefaults.maxCheckpoints}
+              defaultValue={(defaultValues.cacheMaxCheckpoints ?? modelDefaults.maxCheckpoints)?.toString()}
               placeholder={modelDefaults.maxCheckpoints?.toString() ?? t(I18nKey.SETTINGS_FORM$MODEL_SPECIFIC_PLACEHOLDER)}
               disabled={isDisabled}
             />

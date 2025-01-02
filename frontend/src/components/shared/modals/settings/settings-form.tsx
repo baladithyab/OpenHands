@@ -85,7 +85,7 @@ export function SettingsForm({
   }, [settings, models]);
 
   const [showAdvancedOptions, setShowAdvancedOptions] =
-    React.useState(advancedAlreadyInUse);
+    React.useState<boolean>(advancedAlreadyInUse || false);
   const [confirmResetDefaultsModalOpen, setConfirmResetDefaultsModalOpen] =
     React.useState(false);
   const [confirmEndSessionModalOpen, setConfirmEndSessionModalOpen] =
