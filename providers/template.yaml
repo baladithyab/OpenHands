@@ -1,20 +1,36 @@
 # Custom LiteLLM Provider Template
 # Save this file with your provider name (e.g., my_custom_provider.yaml)
 
+# Required fields
 model_name: "custom-model-name"  # Unique identifier for your model
 api_base: "https://api.example.com/v1"  # Base URL for the API
 api_key: "your-api-key-here"  # API key or token
 
-# Optional configuration
-model_type: "completion"  # or "chat"
-temperature: 0.7
-max_tokens: 1000
-timeout: 30
+# Optional fields
+provider_class: "custom_provider.module.ClassName"  # Optional custom provider class
+auth_type: "bearer"  # Authentication type (bearer, basic, etc.)
+timeout: 30  # Request timeout in seconds
+max_retries: 3  # Maximum number of retries
+temperature: 0.7  # Sampling temperature
+max_tokens: 1000  # Maximum number of tokens to generate
+stream: false  # Enable streaming responses
 
-# Custom headers if needed
-headers:
+# Custom headers
+custom_headers:
   X-Custom-Header: "value"
+  Accept: "application/json"
 
-# Custom parameters for the API
+# Provider-specific parameters
 params:
   custom_param: "value"
+  top_p: 0.9
+  frequency_penalty: 0.5
+
+# Validation rules
+validation:
+  required_fields: ["model_name", "api_base", "api_key"]
+  allowed_auth_types: ["bearer", "basic", "none"]
+  min_timeout: 5
+  max_timeout: 120
+  min_temperature: 0.0
+  max_temperature: 2.0

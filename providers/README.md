@@ -1,11 +1,19 @@
-# Custom LiteLLM Providers
+# Enhanced Custom LiteLLM Providers
 
-This feature allows you to add custom model providers via YAML configuration files.
+This feature allows dynamic registration of custom model providers and configurations via YAML files.
+
+## Key Features
+- Dynamic provider registration
+- Custom authentication schemes
+- Schema validation
+- Provider-specific parameters
+- Custom provider classes
+- Built-in validation rules
 
 ## Usage
 
 1. Create a new YAML file in the `providers/` directory using `template.yaml` as a reference
-2. Load your provider:
+2. Load and register your provider:
 
 ```python
 from providers.loader import CustomProviderLoader
@@ -14,26 +22,43 @@ loader = CustomProviderLoader()
 config = loader.load_provider("my_provider.yaml")
 ```
 
-3. Use the loaded configuration with LiteLLM:
+3. Use the provider with LiteLLM:
 
 ```python
 import litellm
 
 response = litellm.completion(
     model=config['model_name'],
-    messages=[...],
-    api_base=config['api_base'],
-    api_key=config['api_key']
+    messages=[{"role": "user", "content": "Hello"}],
+    **config['params']
 )
 ```
 
-## YAML Template
+## Advanced Usage
 
-See `template.yaml` for all available configuration options.
+### Custom Provider Classes
+```yaml
+provider_class: "my_module.CustomProvider"
+```
+
+### Custom Authentication
+```yaml
+auth_type: "basic"  # or "bearer", "none"
+custom_headers:
+  Authorization: "Basic <credentials>"
+```
+
+### Validation Rules
+```yaml
+validation:
+  required_fields: ["model_name", "api_base"]
+  allowed_auth_types: ["bearer", "basic"]
+  min_timeout: 10
+```
 
 ## Best Practices
-
-- Keep your API keys secure
-- Use descriptive model names
-- Test your configuration thoroughly
-- Document any custom parameters in your YAML file
+- Use environment variables for sensitive data
+- Validate configurations before deployment
+- Document custom parameters
+- Test with different authentication schemes
+- Monitor provider performance
