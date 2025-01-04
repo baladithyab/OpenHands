@@ -2,6 +2,7 @@ import { useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import React from "react";
 import posthog from "posthog-js";
+import { validateBedrockSettings } from "#/utils/validate-bedrock-settings";
 import { organizeModelsAndProviders } from "#/utils/organize-models-and-providers";
 import { getDefaultSettings, Settings } from "#/services/settings";
 import { extractModelAndProvider } from "#/utils/extract-model-and-provider";
@@ -17,9 +18,12 @@ import { BaseUrlInput } from "../../inputs/base-url-input";
 import { ConfirmationModeSwitch } from "../../inputs/confirmation-mode-switch";
 import { CustomModelInput } from "../../inputs/custom-model-input";
 import { SecurityAnalyzerInput } from "../../inputs/security-analyzers-input";
+import { PromptCachingInputs } from "../../inputs/prompt-caching-inputs";
+import { PromptRoutingInputs } from "../../inputs/prompt-routing-inputs";
 import { ModalBackdrop } from "../modal-backdrop";
 import { ModelSelector } from "./model-selector";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
+import { ValidationToast } from "../../validation-toast";
 
 interface SettingsFormProps {
   disabled?: boolean;
@@ -60,12 +64,20 @@ export function SettingsForm({
       const isUsingConfirmationMode = !!settings.CONFIRMATION_MODE;
       const isUsingBaseUrl = !!settings.LLM_BASE_URL;
       const isUsingCustomModel = !!settings.LLM_MODEL && !isKnownModel;
+      const isUsingAdvancedCaching = settings.enable_caching && (
+        settings.cache_min_tokens !== null ||
+        settings.cache_max_checkpoints !== null ||
+        settings.cache_strategy !== 'default'
+      );
+      const isUsingRouting = settings.enable_routing;
 
       return (
         isUsingSecurityAnalyzer ||
         isUsingConfirmationMode ||
         isUsingBaseUrl ||
-        isUsingCustomModel
+        isUsingCustomModel ||
+        isUsingAdvancedCaching ||
+        isUsingRouting
       );
     }
 
@@ -73,11 +85,12 @@ export function SettingsForm({
   }, [settings, models]);
 
   const [showAdvancedOptions, setShowAdvancedOptions] =
-    React.useState(advancedAlreadyInUse);
+    React.useState<boolean>(advancedAlreadyInUse || false);
   const [confirmResetDefaultsModalOpen, setConfirmResetDefaultsModalOpen] =
     React.useState(false);
   const [confirmEndSessionModalOpen, setConfirmEndSessionModalOpen] =
     React.useState(false);
+  const [validationErrors, setValidationErrors] = React.useState<Array<{field: string; message: string}>>([]);
 
   const resetOngoingSession = () => {
     if (location.pathname.startsWith("/conversations/")) {
@@ -90,6 +103,13 @@ export function SettingsForm({
     const isUsingAdvancedOptions = keys.includes("use-advanced-options");
     const newSettings = extractSettings(formData);
 
+    // Validate Bedrock settings
+    const errors = validateBedrockSettings(newSettings);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
     saveSettingsView(isUsingAdvancedOptions ? "advanced" : "basic");
     await saveSettings(newSettings, { onSuccess: onClose });
     resetOngoingSession();
@@ -97,6 +117,8 @@ export function SettingsForm({
     posthog.capture("settings_saved", {
       LLM_MODEL: newSettings.LLM_MODEL,
       LLM_API_KEY: newSettings.LLM_API_KEY ? "SET" : "UNSET",
+      ENABLE_CACHING: newSettings.enable_caching,
+      ENABLE_ROUTING: newSettings.enable_routing,
     });
   };
 
@@ -165,15 +187,13 @@ export function SettingsForm({
           />
 
           {showAdvancedOptions && (
-            <AgentInput
-              isDisabled={!!disabled}
-              defaultValue={settings.AGENT}
-              agents={agents}
-            />
-          )}
-
-          {showAdvancedOptions && (
             <>
+              <AgentInput
+                isDisabled={!!disabled}
+                defaultValue={settings.AGENT}
+                agents={agents}
+              />
+
               <SecurityAnalyzerInput
                 isDisabled={!!disabled}
                 defaultValue={settings.SECURITY_ANALYZER}
@@ -184,6 +204,39 @@ export function SettingsForm({
                 isDisabled={!!disabled}
                 defaultSelected={settings.CONFIRMATION_MODE}
               />
+
+              <div className="mt-4 border-t pt-4">
+                <h3 className="mb-4 text-lg font-medium">
+                  {t(I18nKey.SETTINGS_FORM$PROMPT_CACHING_SECTION_TITLE)}
+                </h3>
+                <PromptCachingInputs
+                  isDisabled={!!disabled}
+                  defaultValues={{
+                    enableCaching: settings.enable_caching,
+                    cacheTtlSeconds: settings.cache_ttl_seconds,
+                    cacheMinTokens: settings.cache_min_tokens,
+                    cacheMaxCheckpoints: settings.cache_max_checkpoints,
+                    cacheStrategy: settings.cache_strategy,
+                  }}
+                  modelId={settings.LLM_MODEL}
+                />
+              </div>
+
+              <div className="mt-4 border-t pt-4">
+                <h3 className="mb-4 text-lg font-medium">
+                  {t(I18nKey.SETTINGS_FORM$PROMPT_ROUTING_SECTION_TITLE)}
+                </h3>
+                <PromptRoutingInputs
+                  isDisabled={!!disabled}
+                  defaultValues={{
+                    enableRouting: settings.enable_routing,
+                    routingStrategy: settings.routing_strategy,
+                    routingModelFamily: settings.routing_model_family,
+                    routingCrossRegion: settings.routing_cross_region,
+                    routingMetricsEnabled: settings.routing_metrics_enabled,
+                  }}
+                />
+              </div>
             </>
           )}
         </div>
@@ -254,6 +307,13 @@ export function SettingsForm({
             }}
           />
         </ModalBackdrop>
+      )}
+
+      {validationErrors.length > 0 && (
+        <ValidationToast
+          errors={validationErrors}
+          onClose={() => setValidationErrors([])}
+        />
       )}
     </div>
   );

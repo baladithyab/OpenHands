@@ -1,4 +1,4 @@
-export const LATEST_SETTINGS_VERSION = 5;
+export const LATEST_SETTINGS_VERSION = 6;
 
 export type Settings = {
   LLM_MODEL: string;
@@ -8,6 +8,36 @@ export type Settings = {
   LLM_API_KEY: string | null;
   CONFIRMATION_MODE: boolean;
   SECURITY_ANALYZER: string;
+  // AWS Bedrock settings
+  AWS_ACCESS_KEY_ID?: string;
+  AWS_SECRET_ACCESS_KEY?: string;
+  AWS_SESSION_TOKEN?: string;
+  AWS_REGION_NAME?: string;
+  AWS_PROFILE_NAME?: string;
+  AWS_ROLE_NAME?: string;
+  AWS_SESSION_NAME?: string;
+  AWS_WEB_IDENTITY_TOKEN?: string;
+  AWS_BEDROCK_ENDPOINT?: string;
+  // Bedrock guardrails
+  BEDROCK_ENABLE_GUARDRAILS?: boolean;
+  BEDROCK_GUARDRAIL_ID?: string;
+  BEDROCK_GUARDRAIL_VERSION?: string;
+  BEDROCK_GUARDRAIL_TRACE?: boolean;
+  // Bedrock cross-region
+  BEDROCK_ENABLE_CROSS_REGION?: boolean;
+  BEDROCK_CROSS_REGION_TARGET?: string;
+  // Prompt caching
+  enable_caching?: boolean;
+  cache_ttl_seconds?: number;
+  cache_min_tokens?: number | null;
+  cache_max_checkpoints?: number | null;
+  cache_strategy?: string;
+  // Prompt routing
+  enable_routing?: boolean;
+  routing_strategy?: string;
+  routing_model_family?: string;
+  routing_cross_region?: boolean;
+  routing_metrics_enabled?: boolean;
 };
 
 export type ApiSettings = {
@@ -18,6 +48,36 @@ export type ApiSettings = {
   llm_api_key: string | null;
   confirmation_mode: boolean;
   security_analyzer: string;
+  // AWS Bedrock settings
+  aws_access_key_id?: string;
+  aws_secret_access_key?: string;
+  aws_session_token?: string;
+  aws_region_name?: string;
+  aws_profile_name?: string;
+  aws_role_name?: string;
+  aws_session_name?: string;
+  aws_web_identity_token?: string;
+  aws_bedrock_endpoint?: string;
+  // Bedrock guardrails
+  bedrock_enable_guardrails?: boolean;
+  bedrock_guardrail_id?: string;
+  bedrock_guardrail_version?: string;
+  bedrock_guardrail_trace?: boolean;
+  // Bedrock cross-region
+  bedrock_enable_cross_region?: boolean;
+  bedrock_cross_region_target?: string;
+  // Prompt caching
+  enable_caching?: boolean;
+  cache_ttl_seconds?: number;
+  cache_min_tokens?: number | null;
+  cache_max_checkpoints?: number | null;
+  cache_strategy?: string;
+  // Prompt routing
+  enable_routing?: boolean;
+  routing_strategy?: string;
+  routing_model_family?: string;
+  routing_cross_region?: boolean;
+  routing_metrics_enabled?: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,6 +88,36 @@ export const DEFAULT_SETTINGS: Settings = {
   LLM_API_KEY: null,
   CONFIRMATION_MODE: false,
   SECURITY_ANALYZER: "",
+  // AWS Bedrock settings
+  AWS_ACCESS_KEY_ID: undefined,
+  AWS_SECRET_ACCESS_KEY: undefined,
+  AWS_SESSION_TOKEN: undefined,
+  AWS_REGION_NAME: undefined,
+  AWS_PROFILE_NAME: undefined,
+  AWS_ROLE_NAME: undefined,
+  AWS_SESSION_NAME: undefined,
+  AWS_WEB_IDENTITY_TOKEN: undefined,
+  AWS_BEDROCK_ENDPOINT: undefined,
+  // Bedrock guardrails
+  BEDROCK_ENABLE_GUARDRAILS: false,
+  BEDROCK_GUARDRAIL_ID: undefined,
+  BEDROCK_GUARDRAIL_VERSION: undefined,
+  BEDROCK_GUARDRAIL_TRACE: false,
+  // Bedrock cross-region
+  BEDROCK_ENABLE_CROSS_REGION: false,
+  BEDROCK_CROSS_REGION_TARGET: undefined,
+  // Prompt caching
+  enable_caching: false,
+  cache_ttl_seconds: 3600,
+  cache_min_tokens: null,
+  cache_max_checkpoints: null,
+  cache_strategy: 'default',
+  // Prompt routing
+  enable_routing: false,
+  routing_strategy: 'balanced',
+  routing_model_family: 'auto',
+  routing_cross_region: false,
+  routing_metrics_enabled: false,
 };
 
 export const getCurrentSettingsVersion = () => {
