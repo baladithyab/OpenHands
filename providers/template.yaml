@@ -1,0 +1,20 @@
+# Custom LiteLLM Provider Template
+# Save this file with your provider name (e.g., my_custom_provider.yaml)
+
+model_name: "custom-model-name"  # Unique identifier for your model
+api_base: "https://api.example.com/v1"  # Base URL for the API
+api_key: "your-api-key-here"  # API key or token
+
+# Optional configuration
+model_type: "completion"  # or "chat"
+temperature: 0.7
+max_tokens: 1000
+timeout: 30
+
+# Custom headers if needed
+headers:
+  X-Custom-Header: "value"
+
+# Custom parameters for the API
+params:
+  custom_param: "value"
