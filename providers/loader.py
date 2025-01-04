@@ -27,7 +27,10 @@ class CustomProviderLoader:
 
     def load_provider(self, yaml_path: str) -> Dict[str, Any]:
         """Load and validate a provider YAML file"""
-        path = self.providers_dir / yaml_path
+        # Handle both direct paths and paths relative to providers_dir
+        path = Path(yaml_path)
+        if not path.is_absolute():
+            path = self.providers_dir / yaml_path
         if not path.exists():
             raise FileNotFoundError(f"Provider file {path} not found")
             
